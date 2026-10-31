@@ -18,8 +18,8 @@ from scripts import strata_kaggle as sk
 MODEL_REPO = "SC117/Qwen3.8-Flash-Next-GSQ-RCO-abliterated-GGUF"
 SUPPORTED_TIERS = {"Q2_0", "IQ2_XS", "IQ3_XXS", "IQ3_S"}
 STRATA_SOURCE = Path("/kaggle/working/Strata")
-SERVER_CONFIG = Path("/root/strata-local/.secrets/strata-sc117-server.json")
-API_KEY_FILE = Path("/root/strata-local/.secrets/strata-api-key.txt")
+SERVER_CONFIG = Path("/kaggle/working/strata-sc117-secrets/strata-sc117-server.json")
+API_KEY_FILE = Path("/kaggle/working/strata-sc117-secrets/strata-api-key.txt")
 SERVER_LOG = Path("/kaggle/working/strata-sc117-server.log")
 ENGINE_LOG = Path("/kaggle/working/strata-sc117-engine.log")
 
@@ -275,7 +275,7 @@ def ensure_engine_component(paths: dict[str, Path], context: str, gpu_list: str)
             return
 
     sk.log("No Strata engine component is cached. Asking Strata to prepare from the local SC117 GGUF files.")
-    bootstrap_data = Path("/root/strata-sc117-engine-bootstrap")
+    bootstrap_data = Path("/kaggle/working/strata-sc117-engine-bootstrap")
     # Strata Terminal 0.2.x uses --model-path for local GGUF files and has no
     # setup-only --no-start flag. The engine is fetched/test-started as part of
     # launch, so start against the already-downloaded SC117 files, then stop it
