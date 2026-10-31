@@ -765,6 +765,18 @@ def install_cloudflared_if_missing() -> None:
 
 
 def _read_key() -> str:
+    # Custom model profiles (such as SC117) run through serve.server directly,
+    # so their key is stored in a private file instead of Strata CLI state.
+    key_file = os.environ.get("STRATA_API_KEY_FILE", "").strip()
+    if key_file:
+        path = Path(key_file).expanduser()
+        if not path.is_file():
+            raise RuntimeError("Configured Strata API-key file does not exist: " + str(path))
+        key = path.read_text(encoding="utf-8").strip()
+        if not key:
+            raise RuntimeError("Configured Strata API-key file is empty.")
+        return key
+
     result = subprocess.run(["strata", "launch", "--show-key"], text=True,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             timeout=60, check=True)
