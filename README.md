@@ -83,6 +83,11 @@ Do not publish notebook outputs that contain your API key or other credentials.
 - **Model-cache upload skipped:** review the model card/license and set **I_CONFIRM_MODEL_LICENSE_AND_PRIVATE_STORAGE = True** only if you explicitly want to store the model in a private Kaggle Dataset.
 - **Kaggle session reset:** attach both private datasets again. Kaggle session lifetime and accelerator quotas are controlled by Kaggle.
 
+## Kaggle notebook shell-state workaround
+
+
+- **`%cd` fails with `/root/.ipython/.../dhist` read-only:** use Python `os.chdir('/kaggle/working/devzonex-strata-kaggle-abliterated')` or pass `cwd=...` to `subprocess.run`; avoid IPython's `%cd` magic when its shell database is on a read-only mount. This is a notebook-shell state issue, separate from Strata's model paths.
+
 ## Project structure
 
 - **notebooks/Strata_Kaggle_Launcher.ipynb** — Kaggle Quick Link notebook.
