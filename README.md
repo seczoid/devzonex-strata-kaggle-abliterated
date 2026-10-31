@@ -69,7 +69,7 @@ After startup, the notebook:
 - runs a short authenticated generation test; and
 - prints the OpenCode provider snippet.
 
-The API key is generated locally and stored in a file with restricted permissions. The notebook does not print the key automatically. Only display it in a private notebook session when you are ready to configure OpenCode. The Quick Tunnel URL is temporary and changes between sessions; it is not a permanent hosting service.
+Writable model preparation data, server config, and API key files live under `/kaggle/working`; attached Kaggle Dataset inputs are read-only. The API key is generated locally and stored in a file with restricted permissions. The notebook does not print the key automatically. Only display it in a private notebook session when you are ready to configure OpenCode. The Quick Tunnel URL is temporary and changes between sessions; it is not a permanent hosting service.
 
 Do not publish notebook outputs that contain your API key or other credentials.
 
