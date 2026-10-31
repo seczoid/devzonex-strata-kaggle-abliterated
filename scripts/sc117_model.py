@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
+import zipfile
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from scripts import strata_kaggle as sk
@@ -84,6 +86,62 @@ def sc117_model_paths(data_dir: Path, tier: str) -> dict[str, Path]:
     }
 
 
+def ensure_gguf_py(source: Path) -> Path:
+    """Use Strata's pinned llama.cpp gguf-py, which understands its GGUF tensor types."""
+    candidates = [
+        sk.STRATA_ROOT / "third_party" / "llama.cpp" / "gguf-py",
+        sk.STRATA_ROOT / "terminal" / "current" / "third_party" / "llama.cpp" / "gguf-py",
+    ]
+    for candidate in candidates:
+        if (candidate / "gguf").is_dir():
+            os.environ["STRATA_GGUF_PY"] = str(candidate)
+            return candidate
+
+    setup_text = (source / "setup.py").read_text(encoding="utf-8", errors="replace")
+    match = re.search(r'^LLAMA_CPP_COMMIT\s*=\s*"([0-9a-f]{40})"', setup_text, re.MULTILINE)
+    if not match:
+        raise RuntimeError("Could not find Strata's pinned LLAMA_CPP_COMMIT in setup.py.")
+    commit = match.group(1)
+    archive = Path("/kaggle/working") / f"llama.cpp-{commit[:7]}.zip"
+    gguf_py = Path("/kaggle/working/strata-gguf-py")
+    if not (gguf_py / "gguf").is_dir():
+        if not archive.is_file():
+            sk.log("Fetching Strata's pinned llama.cpp gguf-py dependency for native-pack construction.")
+            sk.run_command([
+                "curl", "-fL", "--retry", "3",
+                f"https://github.com/ggml-org/llama.cpp/archive/{commit}.zip",
+                "-o", str(archive),
+            ], timeout=900)
+        gguf_py.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive) as zf:
+            names = zf.namelist()
+            init_member = next(
+                (name for name in names if name.endswith("/gguf-py/gguf/__init__.py")),
+                None,
+            )
+            if not init_member:
+                raise RuntimeError("Pinned llama.cpp archive does not contain gguf-py/gguf/__init__.py.")
+            prefix = init_member.split("/gguf-py/gguf/__init__.py")[0] + "/gguf-py/"
+            for name in names:
+                if not name.startswith(prefix):
+                    continue
+                relative = name[len(prefix):]
+                rel_path = PurePosixPath(relative)
+                if not relative or rel_path.is_absolute() or ".." in rel_path.parts:
+                    continue
+                target = gguf_py.joinpath(*rel_path.parts)
+                if name.endswith("/"):
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(name) as inp, target.open("wb") as out:
+                    shutil.copyfileobj(inp, out)
+    if not (gguf_py / "gguf").is_dir():
+        raise RuntimeError("Could not extract Strata's pinned gguf-py dependency.")
+    os.environ["STRATA_GGUF_PY"] = str(gguf_py)
+    return gguf_py
+
+
 def _has_runtime(paths: dict[str, Path]) -> bool:
     required = ("dense.bin", "experts.bin", "draft_vocab.bin", "dense.txt")
     return paths["mtp_dir"].is_dir() and all((paths["mtp_dir"] / name).is_file() for name in required)
@@ -156,6 +214,7 @@ def prepare_sc117_model(repo_id: str, tier: str, data_dir: Path) -> dict[str, Pa
             pack_ready = False
 
     if not pack_ready:
+        ensure_gguf_py(source)
         if paths["pack_dir"].exists():
             shutil.rmtree(paths["pack_dir"])
         paths["pack_dir"].parent.mkdir(parents=True, exist_ok=True)
