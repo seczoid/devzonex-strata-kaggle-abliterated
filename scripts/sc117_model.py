@@ -276,24 +276,17 @@ def ensure_engine_component(paths: dict[str, Path], context: str, gpu_list: str)
 
     sk.log("No Strata engine component is cached. Asking Strata to prepare from the local SC117 GGUF files.")
     bootstrap_data = Path("/root/strata-sc117-engine-bootstrap")
+    # Strata Terminal 0.2.x uses --model-path for local GGUF files and has no
+    # setup-only --no-start flag. The engine is fetched/test-started as part of
+    # launch, so start against the already-downloaded SC117 files, then stop it
+    # before the notebook starts the explicit custom server config.
     base = [
-        "strata", "launch", "--family", "qwen", "--model", paths["model_dir"].name.lower(),
-        "--gguf-dir", str(paths["model_dir"]), "--data-dir", str(bootstrap_data),
+        "strata", "launch", "--model-path", str(paths["model_dir"]),
+        "--data-dir", str(bootstrap_data),
         "--context", context, "--vision", "off", "--mtp", "off",
         "--access", "local", "--port", "8081", "--gpu", gpu_list,
         "--yes", "--no-tui",
     ]
-    # First try the setup-only path. It does not start inference.
-    setup = sk.run_streaming(
-        base + ["--no-start"], timeout=3600, check=False,
-        heartbeat_interval=20, heartbeat_label="Strata engine preparation",
-        progress_paths=[bootstrap_data, sk.STRATA_ROOT / "components"],
-    )
-    if setup.returncode and not _engine_component_present():
-        sk.log("Setup-only preparation did not complete; checking whether Strata installed the engine anyway.")
-
-    # Some Strata releases install the ready-made engine only as part of a start.
-    # If so, start against the already-local SC117 shards, then stop before launching our explicit config.
     if not _engine_component_present():
         sk.log("Engine not installed yet; bootstrapping it using the local SC117 files (no stock model download).")
         started = sk.run_streaming(
