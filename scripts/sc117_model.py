@@ -206,7 +206,7 @@ def ensure_engine_component(paths: dict[str, Path], context: str, gpu_list: str)
     sk.log("No Strata engine component is cached. Asking Strata to prepare from the local SC117 GGUF files.")
     bootstrap_data = Path("/root/strata-sc117-engine-bootstrap")
     base = [
-        "strata", "launch", "--family", "qwen", "--model", "q2_0",
+        "strata", "launch", "--family", "qwen", "--model", paths["model_dir"].name.lower(),
         "--gguf-dir", str(paths["model_dir"]), "--data-dir", str(bootstrap_data),
         "--context", context, "--vision", "off", "--mtp", "off",
         "--access", "local", "--port", "8081", "--gpu", gpu_list,
