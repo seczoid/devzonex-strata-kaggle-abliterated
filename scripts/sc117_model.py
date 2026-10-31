@@ -198,10 +198,21 @@ def _engine_component_present() -> bool:
 
 
 def ensure_engine_component(paths: dict[str, Path], context: str, gpu_list: str) -> None:
-    """Install Strata's matching engine without downloading the stock model weights."""
+    """Refresh/check Strata's GPU engine, using only the already-local SC117 model files."""
     if _engine_component_present():
-        sk.log("A Strata engine component is already installed; reusing it.")
-        return
+        # Kaggle may assign a different GPU generation on a later session. Let Strata
+        # update/check the cached engine for the currently visible hardware first.
+        update = sk.run_streaming(
+            ["strata", "launch", "--update", "--yes"],
+            timeout=1800, check=False,
+            heartbeat_interval=20, heartbeat_label="Strata engine compatibility check",
+            progress_paths=[sk.STRATA_ROOT / "components"],
+        )
+        if update.returncode:
+            sk.log("Strata engine update/check returned a non-zero exit code; continuing with the cached engine and validating startup.")
+        if _engine_component_present():
+            sk.log("Strata engine component is present; using the component Strata selected for this session.")
+            return
 
     sk.log("No Strata engine component is cached. Asking Strata to prepare from the local SC117 GGUF files.")
     bootstrap_data = Path("/root/strata-sc117-engine-bootstrap")
