@@ -21,6 +21,7 @@ STRATA_SOURCE = Path("/kaggle/working/Strata")
 SERVER_CONFIG = Path("/root/strata-local/.secrets/strata-sc117-server.json")
 API_KEY_FILE = Path("/root/strata-local/.secrets/strata-api-key.txt")
 SERVER_LOG = Path("/kaggle/working/strata-sc117-server.log")
+ENGINE_LOG = Path("/kaggle/working/strata-sc117-engine.log")
 
 
 def normalize_tier(tier: str) -> str:
@@ -388,7 +389,7 @@ def launch_sc117(paths: dict[str, Path], context: str, gpu_list: str, data_dir: 
         "cwd": str(source),
         "tokenizer": str(paths["tokenizer_dir"]),
         "model_name": f"qwen3.8-flash-next-sc117-{paths['model_dir'].name.lower()}",
-        "log": str(SERVER_LOG),
+        "log": str(ENGINE_LOG),
         "host": "127.0.0.1",
         "port": 8080,
         "api_key": api_key,
