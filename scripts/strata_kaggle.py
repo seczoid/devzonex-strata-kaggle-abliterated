@@ -883,7 +883,11 @@ def verify_public_endpoint(public_url: str, expected_model: str | None = None) -
         answer = "".join(part.get("text", "") for part in answer if isinstance(part, dict))
     print("Authenticated test response: " + str(answer))
     print("OpenCode base URL: " + base + "/v1")
-    print("API key was not printed. Retrieve it privately using: strata launch --show-key")
+    key_file = os.environ.get("STRATA_API_KEY_FILE", "").strip()
+    if key_file:
+        print("API key was not printed. Retrieve it privately from: " + key_file)
+    else:
+        print("API key was not printed. Retrieve it privately using: strata launch --show-key")
     return {"model_id": model_id, "url": base, "unauthenticated_status": unauth.status_code,
             "authenticated_status": chat.status_code}
 
