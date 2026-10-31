@@ -294,18 +294,24 @@ def ensure_engine_component(paths: dict[str, Path], context: str, gpu_list: str)
             heartbeat_interval=20, heartbeat_label="Local SC117 engine bootstrap",
             progress_paths=[bootstrap_data, sk.STRATA_ROOT / "components"],
         )
+        # A failed launch can still leave the engine component installed. Do not
+        # mistake that partial result for successful model preparation, and do not
+        # delete bootstrap data that may be needed to diagnose or resume the setup.
+        if started.returncode:
+            raise RuntimeError(
+                "Strata's local-model bootstrap exited with code "
+                f"{started.returncode}. The engine component may have been installed, "
+                "but model preparation did not complete. Bootstrap data has been preserved at "
+                f"{bootstrap_data}. Inspect /root/.local/state/strata/launch/q2_0-32k.setup.log "
+                "and the output above before retrying."
+            )
         if _engine_component_present():
             sk.run_command(["strata", "launch", "--stop"], check=False, timeout=120)
-        elif started.returncode:
-            raise RuntimeError(
-                "Strata did not install a compatible engine component. Inspect the bootstrap output above; "
-                "no upstream model weights were intentionally downloaded."
-            )
 
     if not _engine_component_present():
         raise RuntimeError("Strata's engine component is still missing after local-model preparation.")
 
-    # The bootstrap config/pack is disposable; the actual server uses packs/sc117_<tier>.
+    # The bootstrap config/pack is disposable only after a successful launch.
     shutil.rmtree(bootstrap_data, ignore_errors=True)
     sk.log("Strata engine component is ready.")
 
